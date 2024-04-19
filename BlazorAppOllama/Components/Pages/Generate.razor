@@ -1,0 +1,78 @@
+﻿@page "/generate"
+@using System.Text.RegularExpressions
+@inject HttpClient Http
+@rendermode InteractiveServer
+
+<PageTitle>💬 OLLama 🚀</PageTitle>
+<div>
+    @if (Answer.done)
+    {
+        <FluentCard Style="background: #0e1a3d;color: #fff;">
+            <p>👨‍💻 @prompt</p>
+        </FluentCard>
+        <br />
+        <FluentCard Style="background: #6f2008;color: #fff;">
+            <p>🤖 @Answer.response.ToString()</p>
+        </FluentCard>
+        <br />
+
+    }
+    <hr />
+    <div style="display:flex">
+        <FluentTextField @bind-Value=ask Placeholder="Enter your prompt here..." style="width: 70%;"></FluentTextField>
+
+        <FluentButton IconStart="@(new Icons.Regular.Size16.ArrowClockwise())"
+                      Appearance="Appearance.Accent"
+                      Loading="@loading"
+                      OnClick="@(() => SendAsync(ask))">
+            Send
+        </FluentButton>
+    </div>
+    <div style="width:70%; display: grid; grid-gap: 12px; grid-auto-flow: column;">
+        <FluentProgress Visible="@(loading)"></FluentProgress>
+    </div>
+</div>
+
+
+@code {
+    private Data.Answer Answer = new();
+
+    private Data.Question Question = new();
+
+    private string ask = string.Empty;
+
+    private string prompt = string.Empty;
+
+    private bool loading = false;
+
+    protected override void OnInitialized()
+    {
+        Http.Timeout = TimeSpan.FromMinutes(10); //TIP
+    }
+
+    private async Task SendAsync(string message)
+    {
+        if (!string.IsNullOrWhiteSpace(message))
+        {
+            Answer.done = false;
+            loading = true;
+            prompt = message;
+            Question.prompt = message;
+
+            var replyServerOllama = await Http.PostAsJsonAsync<Data.Question>("http://localhost:11434/api/generate", Question);
+
+            if (replyServerOllama.IsSuccessStatusCode)
+            {
+                Answer = await replyServerOllama.Content.ReadFromJsonAsync<Data.Answer>();
+
+                loading = false;
+            }
+
+            ask = string.Empty;
+        }
+    }
+}
+
+
+
+
